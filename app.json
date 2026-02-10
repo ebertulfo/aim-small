@@ -38,11 +38,19 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ffef8272-fb8d-4b6b-9aec-21cd9a0f3f5f"
+      }
+    },
+    "owner": "ebertulfo"
   }
 }
