@@ -8,40 +8,105 @@ export default function SetAimsScreen() {
     const params = useLocalSearchParams();
 
     // Parse goals or fallback to mock if direct navigation
-    const goals = params.goals
+    const goals: string[] = params.goals
         ? JSON.parse(params.goals as string)
         : ["Build a SaaS", "Run a Marathon"];
 
-    const [aims, setAims] = useState<Record<string, string>>({});
+    // State: Goal -> Array of Aim strings
+    const [aims, setAims] = useState<Record<string, string[]>>(() => {
+        const initial: Record<string, string[]> = {};
+        goals.forEach(g => {
+            initial[g] = ['']; // Start with one empty aim
+        });
+        return initial;
+    });
 
-    const updateAim = (goal: string, text: string) => {
-        setAims(prev => ({ ...prev, [goal]: text }));
+    const updateAim = (goal: string, text: string, index: number) => {
+        setAims(prev => {
+            const newGoalAims = [...(prev[goal] || [])];
+            newGoalAims[index] = text;
+            return { ...prev, [goal]: newGoalAims };
+        });
+    };
+
+    const addAim = (goal: string) => {
+        setAims(prev => ({
+            ...prev,
+            [goal]: [...(prev[goal] || []), '']
+        }));
     };
 
     const handleContinue = () => {
-        router.push('/plan/summary');
+        // Filter out empty aims
+        const cleanAims: Record<string, string[]> = {};
+        let hasAtLeastOne = false;
+
+        Object.entries(aims).forEach(([goal, goalAims]) => {
+            const filtered = goalAims.filter(a => a.trim().length > 0);
+            if (filtered.length > 0) {
+                cleanAims[goal] = filtered;
+                hasAtLeastOne = true;
+            }
+        });
+
+        if (!hasAtLeastOne) return; // TODO: Show error?
+
+        // Pass to next screen
+        router.push({
+            pathname: '/plan/summary',
+            params: { aims: JSON.stringify(cleanAims) }
+        });
     };
+
+    const singleGoalMode = goals.length === 1;
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.stepIndicator}>Step 2 of 2</Text>
-                <Text style={styles.title}>Commit to Small Aims</Text>
-                <Text style={styles.subtitle}>
-                    What small action can you take today for each goal?
-                </Text>
+
+                {singleGoalMode ? (
+                    <>
+                        <Text style={styles.title}>Commit to Small Aims for your goal "{goals[0]}"</Text>
+                        <Text style={styles.subtitle}>
+                            What are the specific things you can do today?
+                        </Text>
+                    </>
+                ) : (
+                    <>
+                        <Text style={styles.title}>Commit to Small Aims</Text>
+                        <Text style={styles.subtitle}>
+                            What small action can you take today for each goal?
+                        </Text>
+                    </>
+                )}
 
                 <View style={styles.list}>
-                    {goals.map((goal: string, index: number) => (
-                        <View key={index} style={styles.group}>
-                            <Text style={styles.goalLabel}>{goal}</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g., Write 50 lines of code"
-                                value={aims[goal] || ''}
-                                onChangeText={(text) => updateAim(goal, text)}
-                                multiline
-                            />
+                    {goals.map((goal, gIndex) => (
+                        <View key={gIndex} style={styles.group}>
+                            {!singleGoalMode && (
+                                <Text style={styles.goalLabel}>{goal}</Text>
+                            )}
+
+                            <View style={styles.aimsList}>
+                                {(aims[goal] || []).map((aim, aIndex) => (
+                                    <TextInput
+                                        key={aIndex}
+                                        style={styles.input}
+                                        placeholder={`Small Aim #${aIndex + 1}`}
+                                        value={aim}
+                                        onChangeText={(text) => updateAim(goal, text, aIndex)}
+                                        multiline={false}
+                                    />
+                                ))}
+                            </View>
+
+                            <Pressable
+                                style={styles.addButton}
+                                onPress={() => addAim(goal)}
+                            >
+                                <Text style={styles.addButtonText}>+ Add another aim</Text>
+                            </Pressable>
                         </View>
                     ))}
                 </View>
@@ -99,14 +164,23 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#000',
     },
+    aimsList: {
+        gap: 12,
+    },
     input: {
         backgroundColor: '#f5f5f5',
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
         color: '#000',
-        minHeight: 100, // Make it look like a textarea
-        textAlignVertical: 'top',
+    },
+    addButton: {
+        paddingVertical: 8,
+    },
+    addButtonText: {
+        color: '#007AFF',
+        fontSize: 16,
+        fontWeight: '600',
     },
     spacer: {
         height: 40,

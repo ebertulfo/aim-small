@@ -6,14 +6,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const [reminders, setReminders] = useState({
-        morning: true,
-        afternoon: true,
-        evening: true,
+    // Simple mock time state
+    const [times, setTimes] = useState({
+        morning: "8:00 AM",
+        afternoon: "12:00 PM",
+        evening: "8:00 PM"
     });
 
-    const toggle = (key: keyof typeof reminders) => {
-        setReminders(prev => ({ ...prev, [key]: !prev[key] }));
+    const [afternoonEnabled, setAfternoonEnabled] = useState(false);
+
+    // Mock time cycling
+    const cycleTime = (period: 'morning' | 'afternoon' | 'evening') => {
+        const presets = {
+            morning: ["6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM"],
+            afternoon: ["12:00 PM", "1:00 PM", "2:00 PM"],
+            evening: ["6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM"]
+        };
+
+        setTimes(prev => {
+            const current = presets[period].indexOf(prev[period]);
+            const next = (current + 1) % presets[period].length;
+            return { ...prev, [period]: presets[period][next] };
+        });
     };
 
     const handleClearData = () => {
@@ -56,32 +70,66 @@ export default function SettingsScreen() {
 
                 <Text style={styles.sectionHeader}>Notifications</Text>
                 <View style={styles.card}>
-                    <View style={styles.row}>
-                        <Text style={styles.label}>Morning Reminder (8:00 AM)</Text>
-                        <Switch
-                            value={reminders.morning}
-                            onValueChange={() => toggle('morning')}
-                            trackColor={{ false: '#eee', true: '#000' }}
-                        />
-                    </View>
+                    {/* Morning */}
+                    <Pressable
+                        style={styles.row}
+                        onPress={() => cycleTime('morning')}
+                    >
+                        <View>
+                            <Text style={styles.label}>Morning Reminder</Text>
+                            <Text style={styles.subLabel}>Tap to change</Text>
+                        </View>
+                        <View style={styles.valueBox}>
+                            <Text style={styles.valueText}>{times.morning}</Text>
+                        </View>
+                    </Pressable>
+
                     <View style={styles.divider} />
+
+                    {/* Afternoon Switch */}
                     <View style={styles.row}>
-                        <Text style={styles.label}>Afternoon Check-in (12:00 PM)</Text>
+                        <Text style={styles.label}>Afternoon Check-in</Text>
                         <Switch
-                            value={reminders.afternoon}
-                            onValueChange={() => toggle('afternoon')}
+                            value={afternoonEnabled}
+                            onValueChange={setAfternoonEnabled}
                             trackColor={{ false: '#eee', true: '#000' }}
                         />
                     </View>
+
+                    {/* Afternoon Time (Conditional) */}
+                    {afternoonEnabled && (
+                        <>
+                            <View style={styles.divider} />
+                            <Pressable
+                                style={styles.row}
+                                onPress={() => cycleTime('afternoon')}
+                            >
+                                <View>
+                                    <Text style={styles.label}>Afternoon Time</Text>
+                                    <Text style={styles.subLabel}>Tap to change</Text>
+                                </View>
+                                <View style={styles.valueBox}>
+                                    <Text style={styles.valueText}>{times.afternoon}</Text>
+                                </View>
+                            </Pressable>
+                        </>
+                    )}
+
                     <View style={styles.divider} />
-                    <View style={styles.row}>
-                        <Text style={styles.label}>Evening Review (8:00 PM)</Text>
-                        <Switch
-                            value={reminders.evening}
-                            onValueChange={() => toggle('evening')}
-                            trackColor={{ false: '#eee', true: '#000' }}
-                        />
-                    </View>
+
+                    {/* Evening */}
+                    <Pressable
+                        style={styles.row}
+                        onPress={() => cycleTime('evening')}
+                    >
+                        <View>
+                            <Text style={styles.label}>Evening Review</Text>
+                            <Text style={styles.subLabel}>Tap to change</Text>
+                        </View>
+                        <View style={styles.valueBox}>
+                            <Text style={styles.valueText}>{times.evening}</Text>
+                        </View>
+                    </Pressable>
                 </View>
 
                 <Text style={styles.sectionHeader}>Data</Text>
@@ -174,6 +222,23 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         fontWeight: '500',
+        color: '#000',
+    },
+    subLabel: {
+        fontSize: 13,
+        color: '#666',
+        marginTop: 2,
+    },
+    valueBox: {
+        backgroundColor: '#f5f5f5',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    valueText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#000',
     },
     divider: {
         height: 1,

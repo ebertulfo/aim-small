@@ -17,18 +17,15 @@
 ### Ready to get started?
 [Let's start!]
 ```
-3. User is taken to the goals screen
+3. User is taken to the goals screen - First Goal
 ```
 # Goals
-## What are your top 5 goals?
+## It all starts with one thing.
+This is a big thing you want to achieve. We'll start with one and add more later.
 
-[Add Goal 1]
-[Add Goal 2]
-[Add Goal 3]
-[Add Goal 4]
-[Add Goal 5]
+[Goal #1 Placeholder: e.g. "Run a Marathon"]
 
-[Continue]
+[Continue] -> Goes to Step 5 (Aim Definition) - Skipping Step 4
 ```
 4. User is taken to the Small Aims screen - Select Goals
 ```
@@ -46,24 +43,28 @@
 Note: If user selects more than 3 goals, show a warning that working on too many goals may be counterproductive.
 5. User is taken to the Small Aims screen - Set Small Aims
 ```
-# Today
-## What do you wanna work on today?
+# [Goal Name]
+## Commit to Small Aims for your goal "[Goal Name]"
+What can you do today to achieve your goal?
 
-[Add Small Aim 1]
-[Add Small Aim 2]
-[Add Small Aim 3]
+[Small Aim 1. e.g., "Write 500 words"]
+[+ Add another aim]
 
 [Continue]
 ```
 6. Planning complete screen
 ```
-# All set!
-### We'll remind you of your goals and check in on your progress throughout the day!
-## When would you like to be reminded?
+# Set your daily rhythm
+### We'll help you stay on track.
 
-[x][Morning]
-[x][Afternoon]
-[x][Evening]
+[Morning Reminder]
+[ 8:00 AM ] (Tap to change time)
+
+[Afternoon Check-in] [Toggle: OFF/ON]
+[ 12:00 PM ] (Visible if ON)
+
+[Evening Review]
+[ 8:00 PM ] (Tap to change time)
 
 [Start my day]
 ```

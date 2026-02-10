@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -34,7 +34,29 @@ const MOCK_TODAY_GOALS = [
 
 export default function TodayScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const [refreshing, setRefreshing] = useState(false);
+
+    // Derived state from params or mock
+    const todayGoals = useMemo(() => {
+        if (!params.aims) return MOCK_TODAY_GOALS;
+
+        try {
+            const parsedAims = JSON.parse(params.aims as string) as Record<string, string[]>;
+            return Object.entries(parsedAims).map(([goalTitle, aimTexts], index) => ({
+                id: `goal-${index}`,
+                title: goalTitle,
+                aims: aimTexts.map((text, i) => ({
+                    id: `aim-${index}-${i}`,
+                    text,
+                    done: false
+                }))
+            }));
+        } catch (e) {
+            console.error("Failed to parse aims", e);
+            return MOCK_TODAY_GOALS;
+        }
+    }, [params.aims]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -68,7 +90,7 @@ export default function TodayScreen() {
                 <Text style={styles.subtitle}>Here's what you're working on today</Text>
 
                 <View style={styles.list}>
-                    {MOCK_TODAY_GOALS.map((goal) => {
+                    {todayGoals.map((goal) => {
                         const firstAim = goal.aims[0];
                         const remainingCount = goal.aims.length - 1;
 

@@ -5,49 +5,46 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GoalsInputScreen() {
     const router = useRouter();
-    const [goals, setGoals] = useState<string[]>(['', '', '', '', '']);
-
-    const updateGoal = (text: string, index: number) => {
-        const newGoals = [...goals];
-        newGoals[index] = text;
-        setGoals(newGoals);
-    };
+    const [goal, setGoal] = useState('');
 
     const handleContinue = () => {
-        // In a real app, save to storage here.
-        // For wireframe, just navigate to next step.
-        router.push('/plan/select');
+        if (!goal.trim()) return;
+
+        router.push({
+            pathname: '/plan/aims',
+            params: { goals: JSON.stringify([goal]) }
+        });
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.stepIndicator}>Step 1 of 2</Text>
-                <Text style={styles.title}>What are your top 5 goals?</Text>
+                <Text style={styles.title}>It all starts with one thing.</Text>
                 <Text style={styles.subtitle}>
-                    These are the big things you want to achieve.
+                    This is a big thing you want to achieve. We'll start with one and add more later.
                 </Text>
 
-                <View style={styles.inputList}>
-                    {goals.map((goal, index) => (
-                        <View key={index} style={styles.inputContainer}>
-                            <Text style={styles.inputIndex}>{index + 1}.</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder={`Goal #${index + 1}`}
-                                value={goal}
-                                onChangeText={(text) => updateGoal(text, index)}
-                                returnKeyType="next"
-                            />
-                        </View>
-                    ))}
+                <View style={styles.inputContainer}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="e.g. Run a Marathon"
+                        value={goal}
+                        onChangeText={setGoal}
+                        returnKeyType="done"
+                    />
                 </View>
 
                 <View style={styles.spacer} />
 
                 <Pressable
-                    style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+                    style={({ pressed }) => [
+                        styles.button,
+                        !goal.trim() && styles.buttonDisabled,
+                        pressed && styles.buttonPressed
+                    ]}
                     onPress={handleContinue}
+                    disabled={!goal.trim()}
                 >
                     <Text style={styles.buttonText}>Continue</Text>
                 </Pressable>
@@ -85,28 +82,16 @@ const styles = StyleSheet.create({
         marginBottom: 32,
         lineHeight: 24,
     },
-    inputList: {
-        gap: 16,
-    },
     inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
         backgroundColor: '#f5f5f5',
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 4,
         height: 56,
-    },
-    inputIndex: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#999',
-        marginRight: 12,
-        width: 20,
+        justifyContent: 'center',
     },
     input: {
-        flex: 1,
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '500',
         color: '#000',
         height: '100%',
@@ -125,6 +110,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 4,
+    },
+    buttonDisabled: {
+        backgroundColor: '#ccc',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     buttonPressed: {
         opacity: 0.9,
