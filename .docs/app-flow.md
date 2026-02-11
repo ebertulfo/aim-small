@@ -25,46 +25,41 @@ This is a big thing you want to achieve. We'll start with one and add more later
 
 [Goal #1 Placeholder: e.g. "Run a Marathon"]
 
-[Continue] -> Goes to Step 5 (Aim Definition) - Skipping Step 4
+[Continue] -> Goes to Step 4 (Aim Definition)
 ```
-4. User is taken to the Small Aims screen - Select Goals
-```
-# Today
-## What goals do you wanna work on today?
 
-[ ] Goal 1
-[ ] Goal 2
-[ ] Goal 3
-[ ] Goal 4
-[ ] Goal 5
-
-[Continue]
+4. User is taken to the Small Aims screen - Set Small Aims
 ```
-Note: If user selects more than 3 goals, show a warning that working on too many goals may be counterproductive.
-5. User is taken to the Small Aims screen - Set Small Aims
-```
-# [Goal Name]
+# [Header: Back Button]
+# Goal: [Goal Name]
 ## Commit to Small Aims for your goal "[Goal Name]"
 What can you do today to achieve your goal?
 
-[Small Aim 1. e.g., "Write 500 words"]
+[Small Aim 1. e.g., "Write 500 words"] [Trash Icon]
+[Small Aim 2] [Trash Icon]
+
 [+ Add another aim]
 
-[Continue]
+[Continue] 
+(Validation: Must have at least 1 aim to proceed)
 ```
-6. Planning complete screen
+
+5. Planning complete screen
 ```
 # Set your daily rhythm
 ### We'll help you stay on track.
 
-[Morning Reminder]
-[ 8:00 AM ] (Tap to change time)
+[Morning Reminder] [Expandable Card]
+    [Icon] Morning Reminder: [8:00 AM]
+    (On Tap: Expands to show time chips: 3:00 AM - 10:00 AM)
 
-[Afternoon Check-in] [Toggle: OFF/ON]
-[ 12:00 PM ] (Visible if ON)
+[Afternoon Check-in] [Expandable Card]
+    [Icon] Afternoon Check-in: [OFF/ON Toggle]
+    (If ON: Expands to show time chips: 11:00 AM - 2:00 PM)
 
-[Evening Review]
-[ 8:00 PM ] (Tap to change time)
+[Evening Review] [Expandable Card]
+    [Icon] Evening Review: [8:00 PM]
+    (On Tap: Expands to show time chips: 5:00 PM - 10:00 PM)
 
 [Start my day]
 ```

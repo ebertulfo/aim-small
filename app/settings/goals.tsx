@@ -1,50 +1,99 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import * as Crypto from 'expo-crypto';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const MOCK_GOALS = [
-    "Build a SaaS",
-    "Run a Marathon",
-    "Read 20 Books",
-    "Learn Guitar",
-    ""
-];
+import { Goal } from '../../types/domain';
+import { db } from '../../utils/storage';
 
 export default function ManageGoalsScreen() {
     const router = useRouter();
-    const [goals, setGoals] = useState(MOCK_GOALS);
+    const [goals, setGoals] = useState<(Goal | null)[]>([null, null, null, null, null]); // Fixed 5 slots
     const [editIndex, setEditIndex] = useState<number | null>(null);
     const [editText, setEditText] = useState('');
 
-    const handleEdit = (index: number) => {
-        setEditIndex(index);
-        setEditText(goals[index]);
+    useFocusEffect(
+        useCallback(() => {
+            loadGoals();
+        }, [])
+    );
+
+    const loadGoals = async () => {
+        try {
+            const allGoals = await db.getAllGoals(); // Or getActiveGoals?
+            // For now, let's just take the first 5 active ones or fill slots
+            // If we want to maintain specific "slots", we need a way to order them.
+            // For MVP, just show active goals up to 5.
+            const activeGoals = allGoals.filter(g => g.status === 'ACTIVE').slice(0, 5);
+
+            const newSlots: (Goal | null)[] = [null, null, null, null, null];
+            activeGoals.forEach((g, i) => {
+                newSlots[i] = g;
+            });
+            setGoals(newSlots);
+        } catch (e) {
+            console.error("Failed to load goals", e);
+        }
     };
 
-    const handleSave = () => {
+    const handleEdit = (index: number) => {
+        setEditIndex(index);
+        setEditText(goals[index]?.title || '');
+    };
+
+    const handleSave = async () => {
         if (editIndex !== null) {
-            const newGoals = [...goals];
-            newGoals[editIndex] = editText;
-            setGoals(newGoals);
-            setEditIndex(null);
+            try {
+                const now = new Date().toISOString();
+                let goalToSave = goals[editIndex];
+
+                if (goalToSave) {
+                    // Update existing
+                    goalToSave = { ...goalToSave, title: editText, updatedAt: now };
+                } else {
+                    // Create new
+                    goalToSave = {
+                        id: Crypto.randomUUID(),
+                        title: editText,
+                        status: 'ACTIVE',
+                        isPinned: false,
+                        createdAt: now,
+                        updatedAt: now
+                    };
+                }
+
+                await db.saveGoal(goalToSave);
+                await loadGoals();
+                setEditIndex(null);
+            } catch (e) {
+                Alert.alert("Error", "Failed to save goal");
+            }
         }
     };
 
     const handleDelete = (index: number) => {
+        const goal = goals[index];
+        if (!goal) return;
+
         Alert.alert(
             "Delete Goal?",
-            "This will remove the goal and all associated data.",
+            "This will remove the goal from your list.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
                     text: "Delete",
                     style: "destructive",
-                    onPress: () => {
-                        const newGoals = [...goals];
-                        newGoals[index] = "";
-                        setGoals(newGoals);
+                    onPress: async () => {
+                        try {
+                            // We can physically delete or just set to COMPLETED/ARCHIVED
+                            // For "Manage Goals" -> "Delete", let's physically delete for now to clear slot
+                            // OR better: set status to ARCHIVED
+                            await db.deleteGoal(goal.id);
+                            await loadGoals();
+                        } catch (e) {
+                            Alert.alert("Error", "Failed to delete goal");
+                        }
                     }
                 }
             ]
@@ -76,6 +125,7 @@ export default function ManageGoalsScreen() {
                                         value={editText}
                                         onChangeText={setEditText}
                                         autoFocus
+                                        placeholder="Enter goal..."
                                     />
                                     <Pressable onPress={handleSave} style={styles.saveButton}>
                                         <Ionicons name="checkmark" size={20} color="#fff" />
@@ -84,7 +134,7 @@ export default function ManageGoalsScreen() {
                             ) : (
                                 <View style={styles.displayContainer}>
                                     <Text style={[styles.goalText, !goal && styles.emptyText]}>
-                                        {goal || "Empty Slot"}
+                                        {goal?.title || "Empty Slot"}
                                     </Text>
                                     <View style={styles.actions}>
                                         <Pressable onPress={() => handleEdit(index)} style={styles.iconBtn}>
@@ -107,7 +157,7 @@ export default function ManageGoalsScreen() {
                 </View>
 
                 <Pressable style={styles.saveChangesButton} onPress={() => router.back()}>
-                    <Text style={styles.saveChangesText}>Save Changes</Text>
+                    <Text style={styles.saveChangesText}>Done</Text>
                 </Pressable>
             </ScrollView>
         </SafeAreaView>

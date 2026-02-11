@@ -15,84 +15,117 @@
 ### 1.2 Platform
 - iOS only (v1)
 - Expo (React Native)
-- Managed workflow + dev build
+- **Storage Strategy**: Interface-based (Repository Pattern).
+  - Implementation: `AsyncStorage` (or simple JSON file) for v1 MVP/Web testing.
+  - Future-proof: Easy swap to `expo-sqlite` or Cloud.
 
 ---
 
-## 2. Core data model (SQLite)
+## 2. Core Concepts (from Product Logic)
 
-### 2.1 Tables
+### 2.1 Day & Focus
+- **Day**: identified by local date key `YYYY-MM-DD`. No implicit Date object comparisons.
+- **Focus**: Each day has exactly **one focus goal** and **1–3 focus tasks**. These are the only tasks shown on the Today screen.
 
-#### goals
-- id TEXT PRIMARY KEY
-- title TEXT NOT NULL
-- why TEXT
-- status TEXT CHECK(status IN ('ACTIVE','PAUSED','COMPLETED')) NOT NULL
-- is_pinned INTEGER DEFAULT 0
-- last_focused_at TEXT
-- created_at TEXT NOT NULL
-- updated_at TEXT NOT NULL
-
-Constraint:
-- At most **3 goals** where status = 'ACTIVE' (enforced at application layer)
+### 2.2 Rituals
+The system rewards **showing up to the ritual**, not performance.
+1. **Close the day** (evening)
+2. **Plan** (tomorrow or fallback)
 
 ---
 
-#### habits
-- id TEXT PRIMARY KEY
-- title TEXT NOT NULL
-- schedule_type TEXT CHECK(schedule_type IN ('DAILY','WEEKDAYS','CUSTOM')) NOT NULL
-- schedule_days TEXT            -- e.g. bitmask or JSON array
-- status TEXT CHECK(status IN ('ACTIVE','PAUSED')) NOT NULL
-- created_at TEXT NOT NULL
-- updated_at TEXT NOT NULL
+## 3. Data Model (TypeScript Interfaces)
+
+Since we are prioritizing web-testability and simplicity (v1), we will use **TypeScript Interfaces** as our source of truth, backed by a replaceable storage layer.
+
+### 3.1 Core Types
+
+```typescript
+type Goal = {
+  id: string;
+  title: string;
+  why?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+  isPinned: boolean;
+  lastFocusedAt?: string; // ISO Date String
+  createdAt: string;
+  updatedAt: string;
+}
+
+type Habit = {
+  id: string;
+  title: string;
+  scheduleType: 'DAILY' | 'WEEKDAYS' | 'CUSTOM';
+  scheduleDays: number[]; // e.g. [1, 3, 5] for Mon, Wed, Fri
+  status: 'ACTIVE' | 'PAUSED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+type Task = {
+  id: string;
+  title: string;
+  dueDate: string; // YYYY-MM-DD
+  linkedGoalId?: string;
+  isFocusTask: boolean;
+  plannedSource: 'EVENING' | 'MORNING' | 'MANUAL';
+  isDone: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+type DailyPlan = {
+  date: string; // YYYY-MM-DD
+  focusGoalId?: string;
+  closedStatus: 'OPEN' | 'CLOSED' | 'SKIPPED_CLOSE';
+  closedAt?: string;
+  note?: string;
+}
+
+type HabitLog = {
+  id: string;
+  habitId: string;
+  date: string; // YYYY-MM-DD
+  status: 'DONE' | 'MISSED';
+}
+```
+
+### 3.2 Storage Interface (Repository)
+
+To support future migration (to SQLite or Cloud), all data access must go through this interface:
+
+```typescript
+interface DataStore {
+  // Goals
+  getActiveGoals(): Promise<Goal[]>;
+  getGoal(id: string): Promise<Goal | null>;
+  saveGoal(goal: Goal): Promise<void>;
+
+  // Tasks
+  getTasksForDate(date: string): Promise<Task[]>;
+  saveTask(task: Task): Promise<void>;
+
+  // Daily Plan
+  getPlan(date: string): Promise<DailyPlan | null>;
+  savePlan(plan: DailyPlan): Promise<void>;
+
+  // Habits
+  getHabits(): Promise<Habit[]>;
+  getHabitLogs(date: string): Promise<HabitLog[]>;
+  logHabit(log: HabitLog): Promise<void>;
+}
+```
+**v1 Implementation**: A simple class wrapping `AsyncStorage` that serializes these objects to JSON strings.
 
 ---
 
-#### tasks
-- id TEXT PRIMARY KEY
-- title TEXT NOT NULL
-- due_date TEXT NOT NULL         -- YYYY-MM-DD
-- linked_goal_id TEXT
-- is_focus_task INTEGER DEFAULT 0
-- planned_source TEXT CHECK(planned_source IN ('EVENING','MORNING','MANUAL'))
-- is_done INTEGER DEFAULT 0
-- created_at TEXT NOT NULL
-- updated_at TEXT NOT NULL
+## 4. Day + time handling
 
-Indexes:
-- idx_tasks_due_date
-- idx_tasks_focus_due_date (due_date, is_focus_task)
-
----
-
-#### daily_plans
-- date TEXT PRIMARY KEY           -- YYYY-MM-DD
-- focus_goal_id TEXT
-- closed_status TEXT CHECK(closed_status IN ('OPEN','CLOSED','SKIPPED_CLOSE')) DEFAULT 'OPEN'
-- closed_at TEXT
-- note TEXT
-
----
-
-#### habit_logs
-- id TEXT PRIMARY KEY
-- habit_id TEXT NOT NULL
-- date TEXT NOT NULL              -- YYYY-MM-DD
-- status TEXT CHECK(status IN ('DONE','MISSED')) NOT NULL
-
-Unique constraint:
-- (habit_id, date)
-
----
-
-## 3. Day + time handling
-
-### 3.1 Day keys
+### 4.1 Day keys
 - All logic uses explicit `YYYY-MM-DD` keys in **local timezone**
 - No implicit Date comparisons
 
-### 3.2 Evening window
+### 4.2 Evening window
 Default:
 - start: 19:00
 - end: 02:00 (cross-midnight)
@@ -107,9 +140,9 @@ Helper functions:
 
 ---
 
-## 4. Global gatekeeper logic
+## 5. Global gatekeeper logic
 
-### 4.1 Gate evaluation order
+### 5.1 Gate evaluation order
 On app start / resume:
 1. Compute `todayKey`
 2. Compute `closeDateKey = getEffectiveCloseDate(now)`
@@ -118,21 +151,21 @@ On app start / resume:
    → route to CloseDay (hard gate)
 5. Else allow normal navigation
 
-### 4.2 Morning fallback check
+### 5.2 Morning fallback check
 - If no focus tasks exist for `todayKey`
   → surface Quick Plan entry (not a gate)
 
 ---
 
-## 5. Close Day flow (hard gate)
+## 6. Close Day flow (hard gate)
 
-### 5.1 CloseDay.GATED(date)
+### 6.1 CloseDay.GATED(date)
 - Build recap from:
   - focus_goal_id
   - tasks where due_date = date AND is_focus_task = 1
   - habit_logs for date
 
-### 5.2 CloseDay.LOG_AND_CLOSE
+### 6.2 CloseDay.LOG_AND_CLOSE
 - Upsert habit_logs
 - Save optional note
 - Set:
@@ -141,7 +174,7 @@ On app start / resume:
 
 Transition → PlanTomorrow
 
-### 5.3 CloseDay.SKIP_CLOSE
+### 6.3 CloseDay.SKIP_CLOSE
 - closed_status = 'SKIPPED_CLOSE'
 - closed_at = now
 
@@ -149,9 +182,9 @@ Transition → PlanTomorrow
 
 ---
 
-## 6. Plan Tomorrow flow
+## 7. Plan Tomorrow flow
 
-### 6.1 PlanTomorrow.GATED(targetDate)
+### 7.1 PlanTomorrow.GATED(targetDate)
 - Load active goals (≤3)
 - Preselect:
   - last focused active goal
@@ -161,7 +194,7 @@ Rules:
 - exactly 1 goal
 - 1–3 tasks
 
-### 6.2 PlanTomorrow.COMMIT
+### 7.2 PlanTomorrow.COMMIT
 - Upsert daily_plans[targetDate].focus_goal_id
 - Insert tasks:
   - due_date = targetDate
@@ -170,7 +203,7 @@ Rules:
 
 ---
 
-## 7. Morning Quick Plan
+## 8. Morning Quick Plan
 
 ### Condition
 - No tasks where due_date = todayKey AND is_focus_task = 1
@@ -182,7 +215,7 @@ Rules:
 
 ---
 
-## 8. Notification responsibilities
+## 9. Notification responsibilities
 
 - expo-notifications (local only)
 - Two repeating schedules:
@@ -194,7 +227,29 @@ Rules:
 
 ---
 
-## 9. Non-goals (explicit)
+## 10. Planning Streak Logic
+
+A **planning streak** measures consecutive days where the user **engaged with planning**, not task completion.
+
+- **Streak increments**: If the day has at least one focus task.
+- **Streak breaks**: If no focus tasks exist for that day.
+- **Properties**:
+  - Streak starts at 1.
+  - Derived from `tasks` table (count of consecutive days with `is_focus_task=1`).
+  - Skipping Close Day does **not** break streak if planning occurs.
+
+---
+
+## 11. Definition of Success (v1)
+
+The app is successful if:
+- A user can miss days without quitting.
+- A user can return after absence without friction.
+- Planning becomes habitual, not forced.
+
+---
+
+## 12. Non-goals (explicit)
 - No sync
 - No analytics
 - No AI suggestions
@@ -202,9 +257,8 @@ Rules:
 
 ---
 
-## 10. Why this separation matters
+## 13. Why this separation matters
 
 - PRD answers **"why" and "what"**
 - This doc answers **"how" and "with what constraints"**
 - Enables future AI agents or collaborators to work without polluting product intent
-

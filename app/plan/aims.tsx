@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SetAimsScreen() {
@@ -36,6 +37,14 @@ export default function SetAimsScreen() {
         }));
     };
 
+    const removeAim = (goal: string, index: number) => {
+        setAims(prev => {
+            const newGoalAims = [...(prev[goal] || [])];
+            newGoalAims.splice(index, 1);
+            return { ...prev, [goal]: newGoalAims };
+        });
+    };
+
     const handleContinue = () => {
         // Filter out empty aims
         const cleanAims: Record<string, string[]> = {};
@@ -49,7 +58,14 @@ export default function SetAimsScreen() {
             }
         });
 
-        if (!hasAtLeastOne) return; // TODO: Show error?
+        if (!hasAtLeastOne) {
+            Alert.alert(
+                "No Aims Defined",
+                "Please add at least one small aim to continue.",
+                [{ text: "OK" }]
+            );
+            return;
+        };
 
         // Pass to next screen
         router.push({
@@ -62,6 +78,12 @@ export default function SetAimsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <Pressable onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="arrow-back" size={24} color="#000" />
+                </Pressable>
+            </View>
+
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.stepIndicator}>Step 2 of 2</Text>
 
@@ -90,14 +112,21 @@ export default function SetAimsScreen() {
 
                             <View style={styles.aimsList}>
                                 {(aims[goal] || []).map((aim, aIndex) => (
-                                    <TextInput
-                                        key={aIndex}
-                                        style={styles.input}
-                                        placeholder={`Small Aim #${aIndex + 1}`}
-                                        value={aim}
-                                        onChangeText={(text) => updateAim(goal, text, aIndex)}
-                                        multiline={false}
-                                    />
+                                    <View key={aIndex} style={styles.aimRow}>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder={`Small Aim #${aIndex + 1}`}
+                                            value={aim}
+                                            onChangeText={(text) => updateAim(goal, text, aIndex)}
+                                            multiline={false}
+                                        />
+                                        <Pressable
+                                            onPress={() => removeAim(goal, aIndex)}
+                                            style={styles.removeButton}
+                                        >
+                                            <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+                                        </Pressable>
+                                    </View>
                                 ))}
                             </View>
 
@@ -129,8 +158,22 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+    header: {
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 8,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
+        backgroundColor: '#f5f5f5',
+    },
     content: {
         padding: 24,
+        paddingTop: 8,
         paddingBottom: 40,
     },
     stepIndicator: {
@@ -167,12 +210,21 @@ const styles = StyleSheet.create({
     aimsList: {
         gap: 12,
     },
+    aimRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
     input: {
+        flex: 1,
         backgroundColor: '#f5f5f5',
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
         color: '#000',
+    },
+    removeButton: {
+        padding: 8,
     },
     addButton: {
         paddingVertical: 8,

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { db } from '../../utils/storage';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -33,10 +34,23 @@ export default function SettingsScreen() {
     const handleClearData = () => {
         Alert.alert(
             "Clear All Data?",
-            "This cannot be undone.",
+            "This cannot be undone. All goals, tasks, and history will be wiped.",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => console.log('Deleted') }
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await db.clearAll();
+                            Alert.alert("Success", "All data has been cleared.");
+                            // Optionally restart app or nav to onboarding
+                            router.replace('/');
+                        } catch (e) {
+                            Alert.alert("Error", "Failed to clear data.");
+                        }
+                    }
+                }
             ]
         );
     };
